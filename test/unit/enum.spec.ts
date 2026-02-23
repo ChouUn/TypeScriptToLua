@@ -203,3 +203,14 @@ test("enum merging multiple files", () => {
         )
         .expectToMatchJsResult();
 });
+
+test("enum nested in namespace", () => {
+    util.testModule`
+        namespace A {
+            export enum TestEnum {
+                B,
+                C
+            }
+        }
+    `.expectLuaToMatchSnapshot();
+});

@@ -1,0 +1,12 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`enum nested in namespace 1`] = `
+"A = A or ({})
+do
+    A.TestEnum = A.TestEnum or ({})
+    A.TestEnum.B = 0
+    A.TestEnum[A.TestEnum.B] = "B"
+    A.TestEnum.C = 1
+    A.TestEnum[A.TestEnum.C] = "C"
+end"
+`;
