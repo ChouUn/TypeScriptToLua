@@ -392,13 +392,17 @@ describe("symlinked dependency deduplication", () => {
 
     beforeAll(() => {
         // Dynamically create symlink to avoid git symlink portability issues
+        const symlinkDir = path.dirname(symlinkPath);
+        if (!fs.existsSync(symlinkDir)) {
+            fs.mkdirSync(symlinkDir, { recursive: true });
+        }
         if (!fs.existsSync(symlinkPath)) {
             fs.symlinkSync(path.join(projectPath, "shared-lib"), symlinkPath, "junction");
         }
     });
 
     afterAll(() => {
-        if (fs.lstatSync(symlinkPath).isSymbolicLink()) {
+        if (fs.existsSync(symlinkPath) && fs.lstatSync(symlinkPath).isSymbolicLink()) {
             fs.unlinkSync(symlinkPath);
         }
     });
@@ -419,7 +423,7 @@ describe("symlinked dependency deduplication", () => {
         const lua = transpiledFiles[0].lua!;
         // shared-lib is used by both main.ts (directly) and consumer (indirectly via symlink),
         // but should only appear once in the bundle
-        const moduleEntries = (lua.match(/\["[^"]*shared.lib[^"]*"\]\s*=\s*function/g) ?? []).length;
+        const moduleEntries = (lua.match(/\["[^"]*shared-lib[^"]*"\]\s*=\s*function/g) ?? []).length;
         expect(moduleEntries).toBe(1);
     });
 });
