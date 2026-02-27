@@ -345,6 +345,47 @@ test("still works without debug module", () => {
         });
 });
 
+// https://github.com/TypeScriptToLua/TypeScriptToLua/issues/1665
+test("sourceMapTraceback maps anonymous function locations in .lua files (#1665)", () => {
+    // Nested IIFEs produce <file.lua:N> anonymous function notation in traceback.
+    // Old pattern (%S+)%.lua:(%d+) captures "<main" from "<main.lua:4>",
+    // failing the sourcemap lookup. Fix: ([^%s<]+) excludes "<".
+    //
+    // Compiled Lua for the nested IIFEs below:
+    //   line 3: (function()
+    //   line 4:     (function()
+    //   line 5:         print(debug.traceback())
+    //   line 6:     end)(nil)
+    //   line 7: end)(nil)
+    const fakeTraceback = [
+        "stack traceback:",
+        "\tmain.lua:5: in function <main.lua:4>",
+        "\tmain.lua:6: in function <main.lua:3>",
+        "\t[C]: in ?",
+    ].join("\n");
+
+    const result = util.testFunction`
+        return (() => {
+            return (() => {
+                return debug.traceback();
+            })();
+        })();
+    `
+        .setLuaHeader(
+            `__TS__sourcemap = { ["main.lua"] = {["3"] = 7, ["4"] = 8, ["5"] = 9, ["6"] = 8} }\n` +
+                `local __real_tb = debug.traceback\n` +
+                `debug.traceback = function() return ${JSON.stringify(fakeTraceback)} end`
+        )
+        .setOptions({ sourceMapTraceback: true })
+        .getLuaExecutionResult();
+
+    // Regular line references should be mapped
+    expect(result).toContain("main.ts:9");
+    expect(result).toContain("main.ts:8");
+    // Anonymous function definitions <main.lua:4> and <main.lua:3> should also be mapped
+    expect(result).not.toContain("main.lua");
+});
+
 util.testEachVersion(
     "error stacktrace omits constructor and __TS_New",
     () => util.testFunction`
