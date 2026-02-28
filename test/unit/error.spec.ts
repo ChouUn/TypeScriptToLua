@@ -362,6 +362,13 @@ test("sourceMapTraceback maps anonymous function locations in .lua files (#1665)
         "\t[C]: in ?",
     ].join("\n");
 
+    // Inject sourcemap for "main.lua" and mock debug.traceback to return file-based frames.
+    const header = `
+        __TS__sourcemap = { ["main.lua"] = ${mapping} };
+        local __real_tb = debug.traceback
+        debug.traceback = function() return ${JSON.stringify(fakeTraceback)} end
+    `;
+
     const builder = util.testFunction`
         return (() => {
             return (() => {
@@ -369,12 +376,7 @@ test("sourceMapTraceback maps anonymous function locations in .lua files (#1665)
             })();
         })();
     `
-        // Inject sourcemap for "main.lua" and mock debug.traceback to return file-based frames.
-        .setLuaHeader(`
-            __TS__sourcemap = { ["main.lua"] = ${mapping} };
-            local __real_tb = debug.traceback
-            debug.traceback = function() return ${JSON.stringify(fakeTraceback)} end
-        `)
+        .setLuaHeader(header)
         .setOptions({ sourceMapTraceback: true });
 
     const lua = builder.getMainLuaCodeChunk();
